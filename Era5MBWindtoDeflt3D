@@ -15,14 +15,14 @@ from netCDF4 import Dataset
 from datetime import datetime, timedelta
 
 # USER-DEFINED INPUT: Paths for input and output directories
-dinput = r'D:/Users/fmaghsoodifar/OneDrive - The University of Alabama/Research/Projects/3rd_CW_CM/HydrodynamicModel/Salley2020/ERA5Salley2020/'  # Input directory
-doutput = r'D:/Users/fmaghsoodifar/OneDrive - The University of Alabama/Research/Projects/3rd_CW_CM/HydrodynamicModel/Salley2020/'  # Output directory
+dinput = r'.../HydrodynamicModel/Salley2020/ERA5Salley2020/'  # Input directory
+doutput = r'.../HydrodynamicModel/Salley2020/'  # Output directory
 itdaten = datetime.strptime(
     '19000101', '%Y%m%d'
     )  # Reference date for time conversion
 
 # Load Data: Filename for input and output files
-filename = 'era5_MB_wind_pressure_2017.nc'  # Input file name
+filename = 'era5_MB_wind_pressure_2020.nc'  # Input file name
 input_filepath = os.path.join(dinput, filename)  # Full path for the input file
 output_filepath = os.path.join(
     doutput, filename.replace('.nc', '_dfm.nc')
