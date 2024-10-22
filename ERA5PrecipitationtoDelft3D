@@ -1,0 +1,96 @@
+import os
+import numpy as np
+from netCDF4 import Dataset
+from datetime import datetime, timedelta
+
+def process_netcdf(input_filepath, output_filepath, reference_date):
+    """
+    Process the input netCDF file and write the required data to a new netCDF file.
+
+    Parameters:
+    input_filepath (str): Path to the input netCDF file.
+    output_filepath (str): Path to save the output netCDF file.
+    reference_date (datetime): Reference date for time calculations.
+
+    """
+    try:
+        # Open the input netCDF file in read mode
+        with Dataset(input_filepath, 'r') as ncid0:
+            # Read longitude values from the netCDF file
+            lon = ncid0.variables['longitude'][:]
+            lon[lon >= 180] = lon[lon >= 180] - 360  # Adjust longitudes to [-180, 180] range
+            lon = np.sort(lon)  # Sort longitudes
+
+            # Read latitude values
+            lat = ncid0.variables['latitude'][:]
+
+            # Read time values and convert to minutes
+            time = ncid0.variables['valid_time'][:]
+            time_in_minutes = time * 60
+
+            # Read total precipitation values and flip along the latitude axis
+            Tprec = ncid0.variables['tp'][:, :, :]
+            Tprec_flipped = np.flip(Tprec, axis=1)
+
+            # Create the output netCDF file in write mode
+            with Dataset(output_filepath, 'w', format='NETCDF4') as ncid:
+                # Define dimensions
+                ncid.createDimension('valid_time', len(time_in_minutes))
+                ncid.createDimension('y', len(lat))
+                ncid.createDimension('x', len(lon))
+
+                # Define and write longitude variable
+                var_lon = ncid.createVariable('X', 'f8', ('x',))
+                var_lon.units = 'degrees_east'
+                var_lon.standard_name = 'longitude'
+                var_lon[:] = lon
+
+                # Define and write latitude variable
+                var_lat = ncid.createVariable('Y', 'f8', ('y',))
+                var_lat.units = 'degrees_north'
+                var_lat.standard_name = 'latitude'
+                var_lat[:] = lat
+
+                # Define and write time variable
+                var_time = ncid.createVariable('time', 'f8', ('valid_time',))
+                var_time.units = 'minutes since 1900-01-01 00:00:00 +00:00'
+                var_time.standard_name = 'time'
+                var_time.calendar = 'gregorian'
+                var_time.long_name = 'Time - minutes since 1900-01-01 00:00:00 +00:00'
+                var_time[:] = time_in_minutes
+
+                # Define and write total precipitation (rainfall)
+                var_tprec = ncid.createVariable('rainfall', 'f4', ('valid_time', 'y', 'x'))
+                var_tprec.units = 'm'
+                var_tprec.long_name = 'rainfall'
+                var_tprec.standard_name = 'rainfall'
+                var_tprec[:, :, :] = Tprec_flipped
+
+                # Log the final time written to the file
+                end_time = reference_date + timedelta(hours=time[-1])
+                print(f'Data until {end_time.strftime("%Y%m%d %H:%M")} written to file.')
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+def main():
+    """
+    Main function to set paths, reference date, and process the netCDF file.
+    """
+    # USER-DEFINED INPUT: Set input/output paths and reference date
+    dinput = input("Enter the input directory path: ").strip()  # Input directory
+    doutput = input("Enter the output directory path: ").strip()  # Output directory
+
+    filename = 'data_stream-oper.nc'  # Input file name
+    input_filepath = os.path.join(dinput, filename)
+    output_filepath = os.path.join(doutput, filename.replace('.nc', '_dfm.nc'))
+
+    reference_date = datetime.strptime('19000101', '%Y%m%d')  # Reference date (January 1, 1900)
+
+    # Process the netCDF file
+    process_netcdf(input_filepath, output_filepath, reference_date)
+
+
+if __name__ == "__main__":
+    main()
