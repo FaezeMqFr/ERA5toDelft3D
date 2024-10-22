@@ -1,0 +1,141 @@
+"""
+Created on Wed Jun 19 2024
+
+@author: Faezeh Maghsoodifar
+
+This script fetches and converts discharge data from the USGS API between specific dates.
+The data is converted from cubic feet per second (cfs) to cubic centimeters per second (ccs).
+The converted data is then saved to a CSV file, resampled at hourly intervals.
+
+"""
+
+import os
+import numpy as np
+from netCDF4 import Dataset
+from datetime import datetime, timedelta
+
+# USER-DEFINED INPUT: Paths for input and output directories
+dinput = r'D:/Users/fmaghsoodifar/OneDrive - The University of Alabama/Research/Projects/3rd_CW_CM/HydrodynamicModel/Salley2020/ERA5Salley2020/'  # Input directory
+doutput = r'D:/Users/fmaghsoodifar/OneDrive - The University of Alabama/Research/Projects/3rd_CW_CM/HydrodynamicModel/Salley2020/'  # Output directory
+itdaten = datetime.strptime(
+    '19000101', '%Y%m%d'
+    )  # Reference date for time conversion
+
+# Load Data: Filename for input and output files
+filename = 'era5_MB_wind_pressure_2017.nc'  # Input file name
+input_filepath = os.path.join(dinput, filename)  # Full path for the input file
+output_filepath = os.path.join(
+    doutput, filename.replace('.nc', '_dfm.nc')
+    )  # Full path for the output file with '_dfm.nc' appended
+
+# Open the input netCDF file in read mode
+with Dataset(input_filepath, 'r') as ncid0:
+
+    # Read longitude values and adjust longitudes greater than 180 degrees
+    lon = ncid0.variables['longitude'][
+          :]  # Extract longitude values from the netCDF file
+    lon[lon >= 180] = lon[
+                          lon >= 180] - 360  # Convert longitudes > 180 to the [-180, 180] range
+    lon = np.sort(lon)  # Sort the longitudes in ascending order
+
+    # Read latitude values from the input file
+    lat = ncid0.variables['latitude'][
+          :]  # Extract latitude values from the netCDF file
+
+    # Read time values and convert from hours to minutes since the reference date
+    time = ncid0.variables['time'][
+           :]  # Extract time values (assumed in hours) from the netCDF file
+    time_in_minutes = time * 60  # Convert time from hours to minutes
+
+    # Read pressure and wind component values from the input netCDF file
+    Pmsl = ncid0.variables['msl'][:, :, :]  # Mean sea level pressure (Pa)
+    U10 = ncid0.variables['u10'][:, :,
+          :]  # U wind component (eastward wind, m/s)
+    V10 = ncid0.variables['v10'][:, :,
+          :]  # V wind component (northward wind, m/s)
+
+    # Flip the data along the latitude axis (equivalent to MATLAB's fliplr function)
+    Pmsl_flipped = np.flip(
+        Pmsl, axis=1
+        )  # Flip pressure data along the latitude axis
+    U10_flipped = np.flip(
+        U10, axis=1
+        )  # Flip U wind data along the latitude axis
+    V10_flipped = np.flip(
+        V10, axis=1
+        )  # Flip V wind data along the latitude axis
+
+    # Create the output netCDF file in write mode
+    with Dataset(output_filepath, 'w', format='NETCDF4') as ncid:
+        # Define dimensions for the new netCDF file
+        ncid.createDimension(
+            'time', len(time_in_minutes)
+            )  # Create time dimension
+        ncid.createDimension('y', len(lat))  # Create latitude dimension
+        ncid.createDimension('x', len(lon))  # Create longitude dimension
+
+        # Define variables for longitude, latitude, and their attributes
+        # Longitude
+        var_lon = ncid.createVariable(
+            'X', 'f8', ('x',)
+            )  # Create a variable for longitude
+        var_lon.units = 'degrees_east'  # Set units for longitude
+        var_lon.standard_name = 'longitude'  # Set the standard name for longitude
+        var_lon[:] = lon  # Write the longitude data to the output file
+
+        # Latitude
+        var_lat = ncid.createVariable(
+            'Y', 'f8', ('y',)
+            )  # Create a variable for latitude
+        var_lat.units = 'degrees_north'  # Set units for latitude
+        var_lat.standard_name = 'latitude'  # Set the standard name for latitude
+        var_lat[:] = lat  # Write the latitude data to the output file
+
+        # Time
+        var_time = ncid.createVariable(
+            'time', 'f8', ('time',)
+            )  # Create a variable for time
+        var_time.units = 'minutes since 1900-01-01 00:00:00 +00:00'  # Set units for time
+        var_time.standard_name = 'time'  # Set the standard name for time
+        var_time.calendar = 'gregorian'  # Set the calendar type to Gregorian
+        var_time.long_name = 'Time - minutes since 1900-01-01 00:00:00 +00:00'  # Set the long name for time
+        var_time[:] = time_in_minutes  # Write the time data to the output file
+
+        # Define the pressure and wind component variables and their attributes
+        # Mean sea level pressure (Pmsl)
+        var_p = ncid.createVariable(
+            'air_pressure_fixed_height', 'f4', ('time', 'y', 'x')
+            )  # Create variable for pressure
+        var_p.units = 'Pa'  # Set units for pressure
+        var_p.long_name = 'Mean sea level pressure'  # Set long name for pressure
+        var_p.standard_name = 'air_pressure'  # Set standard name for pressure
+        var_p[:, :,
+        :] = Pmsl_flipped  # Write the flipped pressure data to the output file
+
+        # U wind component (eastward wind)
+        var_u10 = ncid.createVariable(
+            'eastward_wind', 'f4', ('time', 'y', 'x')
+            )  # Create variable for U wind
+        var_u10.units = 'm s**-1'  # Set units for U wind
+        var_u10.long_name = '10 metre U wind component'  # Set long name for U wind
+        var_u10.standard_name = 'eastward_wind'  # Set standard name for U wind
+        var_u10[:, :,
+        :] = U10_flipped  # Write the flipped U wind data to the output file
+
+        # V wind component (northward wind)
+        var_v10 = ncid.createVariable(
+            'northward_wind', 'f4', ('time', 'y', 'x')
+            )  # Create variable for V wind
+        var_v10.units = 'm s**-1'  # Set units for V wind
+        var_v10.long_name = '10 metre V wind component'  # Set long name for V wind
+        var_v10.standard_name = 'northward_wind'  # Set standard name for V wind
+        var_v10[:, :,
+        :] = V10_flipped  # Write the flipped V wind data to the output file
+
+        # Print a log message to indicate the process is complete
+        end_time = itdaten + timedelta(
+            hours=float(time[-1])
+            )  # Calculate the end time using the last time value
+        print(
+            f'Data until {end_time.strftime("%Y%m%d %H:%M")} written to file.'
+            )  # Log the completion
