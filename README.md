@@ -34,21 +34,21 @@ pip install -r requirements.txt
 
 ## Project Structure
 
-- `wind_pressure_conversion.py`: Script for converting wind (U10, V10) and pressure (mean sea level) data from ERA5 to Delft3D-compatible NetCDF format.
-- `rainfall_conversion.py`: Script for converting total precipitation (rainfall) data from ERA5 to Delft3D-compatible NetCDF format.
+- `Era5MBWindtoDeflt3D`: Script for converting wind (U10, V10) and pressure (mean sea level) data from ERA5 to Delft3D-compatible NetCDF format.
+- `ERA5PrecipitationtoDelft3D`: Script for converting total precipitation (rainfall) data from ERA5 to Delft3D-compatible NetCDF format.
 - `input/`: Directory for input ERA5 NetCDF files.
 - `output/`: Directory for the generated output NetCDF files.
 
 ## Usage
 
 ### 1. Wind and Pressure Data Conversion
-The script `wind_pressure_conversion.py` extracts and processes wind (U10, V10) and pressure (mean sea level) data from an ERA5 NetCDF file, then writes the data into a new NetCDF file compatible with Delft3D.
+The script `Era5MBWindtoDeflt3D` extracts and processes wind (U10, V10) and pressure (mean sea level) data from an ERA5 NetCDF file, then writes the data into a new NetCDF file compatible with Delft3D.
 
 **Example usage:**
 python wind_pressure_conversion.py
 
 ### 2. Rainfall Data Conversion
-The script `rainfall_conversion.py` extracts total precipitation data (rainfall) from an ERA5 NetCDF file and converts it into a Delft3D-compatible format.
+The script `ERA5PrecipitationtoDelft3D` extracts total precipitation data (rainfall) from an ERA5 NetCDF file and converts it into a Delft3D-compatible format.
 
 **Example usage:**
 python rainfall_conversion.py
